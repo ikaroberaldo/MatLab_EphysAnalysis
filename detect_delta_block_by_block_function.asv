@@ -1,0 +1,50 @@
+% Detect Delta block by block
+function detect_delta_block_by_block_function(directory,names)
+
+mkdir(fullfile(directory,'delta'))
+for ii = 1:length(names)
+    disp(names{ii})
+    clearvars -except directory names counter ii s_p
+    counter = 1;
+    
+    % Complete filename
+    filename1 = fullfile(directory,names{ii},'blocked_data.mat');
+    filename2 = fullfile(directory,names{ii},'GMM_Classification.mat');
+    load(filename1,'LFP1','fs')
+    load(filename2)
+    %     LFP1 = gpuArray(LFP1);
+    %     LFP2 = gpuArray(LFP2);
+    %     LFP3 = gpuArray(LFP3);
+    
+    GMM_NREM_All_Sort(:) = false;
+    GMM_NREM_All_Sort(GMM.All_Sort == 2) = true;
+    GMM_REM_All_Sort(:) = false;
+    GMM_REM_All_Sort(GMM.All_Sort == 1) = true;
+    GMM_WK_All_Sort(:) = false;
+    GMM_WK_All_Sort(GMM.All_Sort == 3) = true;
+    
+    % Get only the NREM epochs
+    LFP1 = LFP1(GMM.All_Sort == 2,:);
+    
+    % Detect delta
+    sd_threshold = 2.8;
+
+    % NATY'S VERSION
+    data_windowing.data_w = LFP1;
+    data_windowing.time_w = linspace(0,size(LFP1,2)/fs,size(LFP1,2));
+    delta_parameters = deltaDetect(data_windowing, fs, sd_threshold, false);
+    delta_blocks = [delta_parameters.delta_detected(:,1) delta_parameters.delta_detected(:,5:7)
+
+    % IKARO'S VERSION
+%     [delta_blocks, parameters] = detect_Delta_Naty_algorithm(LFP1,fs,sd_threshold,false);
+    % Fix the delta_blocks epochs according to NREM periods
+%     NREM = find(GMM.All_Sort == 2);
+%     delta_blocks(:,1) = NREM(delta_blocks(:,1));
+    
+    display(['total number of candidate events are ' num2str(size(delta_blocks,1))])
+    
+    sav = fullfile(directory,'delta',names{ii});
+    save(sav,'delta_blocks',"parameters",'sd_threshold')
+    
+end
+end
